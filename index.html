@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <title>あとどけい</title>
+<meta name="theme-color" content="#D9E4DD">
+<link rel="manifest" href="./manifest.json">
+<link rel="apple-touch-icon" href="./icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;500;800&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=Noto+Sans+Mongolian&display=swap" rel="stylesheet">
@@ -574,6 +577,14 @@
     if (document.visibilityState==="visible" && targetAt && !ringing) requestLock();
   });
 })();
+</script>
+<script>
+  // Service Worker 登録：GitHub Pages のサブパスでも動くよう相対指定
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("./sw.js").catch(() => {});
+    });
+  }
 </script>
 </body>
 </html>
