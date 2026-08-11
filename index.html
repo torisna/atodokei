@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>あとどけい</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;500;800&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=Noto+Sans+Mongolian&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#D9E4DD; --paper:#FFFDF7; --ink:#22282C; --sub:#8A9490;
+    --pick:#E2402F; --track:#ECE6DA; --ad-h:50px;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%}
+  body{
+    margin:0;background:var(--bg);color:var(--ink);
+    font-family:"M PLUS Rounded 1c",system-ui,-apple-system,"Hiragino Maru Gothic ProN",sans-serif;
+    display:flex;flex-direction:column;align-items:center;
+    padding:calc(env(safe-area-inset-top) + 6px) 16px calc(var(--ad-h) + 8px);
+    gap:10px;overflow:hidden;height:100dvh;
+  }
+  body.adult{
+    font-family:"Zen Kaku Gothic New",system-ui,-apple-system,"Hiragino Sans",sans-serif;
+    --bg:#CFD8D6; --paper:#FCFCFA;
+  }
+  body.adult #headline{font-weight:700;letter-spacing:.01em}
+  body.adult button{font-weight:700;border-radius:12px}
+
+  /* 伝統モンゴル文字：縦書き・行は左→右（vertical-lr はこの文字のための書字方向） */
+  /* 数字・ラテン文字は本文フォントのまま、モンゴル文字だけ Noto に落とす
+     （フォントフォールバックはグリフ単位なので、順番が全て） */
+  body.mong{font-family:"M PLUS Rounded 1c","Noto Sans Mongolian",system-ui,sans-serif}
+  body.mong.adult{font-family:"Zen Kaku Gothic New","Noto Sans Mongolian",system-ui,sans-serif}
+  body.mong #headline,body.mong #subline{
+    writing-mode:vertical-lr;text-orientation:mixed;
+    max-height:26vh;margin:0 auto;height:auto;line-height:1.4;
+  }
+  body.mong #headline{font-size:clamp(16px,4.4vw,22px);font-weight:400}
+  body.mong #headline .big{font-size:1.4em}
+  body.mong #clockWrap{width:min(74vw,38vh)}
+  body.mong .mins,body.mong #stop,body.mong #snooze{
+    writing-mode:vertical-lr;text-orientation:mixed;
+    height:104px;padding:8px 0;font-size:15px;font-weight:400;
+  }
+  body.mong .mins small{display:inline;font-size:13px;margin:6px 0 0}
+  /* 縦中横（日本語の tate-chu-yoko と同じ手法）：数字だけ正立させる */
+  body.mong .tcy{
+    text-combine-upright:all;-webkit-text-combine:horizontal;
+    text-orientation:upright;letter-spacing:0;
+    font-family:"M PLUS Rounded 1c",system-ui,sans-serif;font-weight:800;
+  }
+  body.mong.adult .tcy{font-family:"Zen Kaku Gothic New",system-ui,sans-serif;font-weight:700}
+  body.mong #headline .big{font-size:1.7em}
+  body.mong #modes button,body.mong #langs button,body.mong #closeSheet{font-weight:400}
+
+  #topbar{width:100%;max-width:460px;display:flex;justify-content:flex-end;height:36px;flex:0 0 auto}
+  #gear{width:36px;height:36px;border-radius:50%;font-size:17px;padding:0;line-height:36px}
+
+  #clockWrap{
+    width:min(92vw,52vh);aspect-ratio:1;flex:0 1 auto;touch-action:none;
+    filter:drop-shadow(0 8px 20px rgba(34,40,44,.13));
+  }
+  svg{width:100%;height:100%;display:block}
+  .num{font-weight:500;font-size:15px;text-anchor:middle;dominant-baseline:central;fill:var(--ink)}
+  .num.cardinal{font-weight:800;font-size:19px}
+  #ringTrack{fill:none;stroke:var(--track);stroke-width:11}
+  #arc{fill:none;stroke:var(--pick);stroke-width:11;stroke-linecap:butt}
+  #goalMark{fill:var(--pick)}
+  .hand{stroke:var(--ink);stroke-linecap:round}
+  #sec{stroke:var(--sub);stroke-width:1.2}
+  #hour{stroke-width:6}
+  #min{stroke-width:4}
+
+  #headline{font-weight:800;font-size:clamp(18px,5.8vw,28px);line-height:1.2;text-align:center;margin:0}
+  #headline .big{color:var(--pick);font-size:1.5em}
+  #subline{margin:2px 0 0;font-size:13px;color:var(--sub);font-weight:500;text-align:center;height:16px}
+
+  #panel{width:100%;max-width:460px;display:flex;flex-direction:column;gap:8px;margin-top:auto}
+  .row{display:flex;gap:8px;justify-content:center}
+  button{
+    font-family:inherit;font-weight:800;color:var(--ink);background:var(--paper);
+    border:none;border-radius:18px;box-shadow:0 3px 0 rgba(34,40,44,.14);
+    cursor:pointer;transition:transform .08s,box-shadow .08s;
+  }
+  button:active{transform:translateY(3px);box-shadow:0 0 0 rgba(34,40,44,.14)}
+  button:focus-visible{outline:3px solid var(--pick);outline-offset:2px}
+  .mins{font-size:21px;padding:13px 0;flex:1 1 0;min-width:60px}
+  .mins small{display:block;font-size:11px;font-weight:500;color:var(--sub);margin-top:1px}
+  #stop{flex:2;padding:15px;font-size:19px;background:var(--pick);color:#fff;box-shadow:0 3px 0 rgba(0,0,0,.25)}
+  #snooze{flex:1;padding:15px;font-size:16px}
+  .hidden{display:none !important}
+
+  #sheet{
+    position:fixed;inset:auto 0 0 0;background:var(--paper);z-index:9;
+    border-radius:22px 22px 0 0;padding:18px 18px calc(18px + var(--ad-h));
+    box-shadow:0 -8px 30px rgba(34,40,44,.2);transform:translateY(110%);transition:transform .22s ease;
+    max-height:80dvh;overflow:auto;
+  }
+  #sheet.open{transform:translateY(0)}
+  #sheet h2{margin:0 0 10px;font-size:14px;font-weight:800;color:var(--sub)}
+  #sheet h2:not(:first-child){margin-top:18px}
+  #swatches{display:flex;gap:12px;flex-wrap:wrap}
+  .sw{width:44px;height:44px;border-radius:50%;border:3px solid transparent;box-shadow:none;padding:0}
+  .sw[aria-pressed="true"]{border-color:var(--ink)}
+  #modes,#langs{display:flex;gap:8px;flex-wrap:wrap}
+  #modes button,#langs button{flex:1 1 auto;padding:11px 14px;font-size:14px;background:var(--bg)}
+  #modes button[aria-pressed="true"],#langs button[aria-pressed="true"]{background:var(--pick);color:#fff}
+  #closeSheet{width:100%;padding:13px;font-size:16px;margin-top:18px}
+
+  #adSlot{
+    position:fixed;left:0;right:0;bottom:0;height:var(--ad-h);
+    display:flex;align-items:center;justify-content:center;
+    background:rgba(255,255,255,.55);border-top:1px dashed var(--sub);
+    font-size:11px;color:var(--sub);font-weight:500;z-index:8;
+  }
+
+  #ringing #headline{animation:pop .6s ease-in-out infinite alternate}
+  @keyframes pop{from{transform:scale(1)}to{transform:scale(1.06)}}
+  @media (prefers-reduced-motion:reduce){#ringing #headline{animation:none}}
+</style>
+</head>
+<body>
+
+<div id="topbar"><button id="gear" aria-label="settings">⚙</button></div>
+
+<div id="clockWrap">
+  <svg id="clock" viewBox="0 0 200 200" role="img" aria-label="clock">
+    <circle id="ringTrack" cx="100" cy="100" r="92"/>
+    <path id="arc" d=""/>
+    <circle cx="100" cy="100" r="85" fill="var(--paper)"/>
+    <g id="ticks"></g>
+    <g id="numbers"></g>
+    <circle id="goalMark" cx="100" cy="8" r="0"/>
+    <line id="hour" class="hand" x1="100" y1="100" x2="100" y2="55"/>
+    <line id="min"  class="hand" x1="100" y1="100" x2="100" y2="35"/>
+    <line id="sec"  class="hand" x1="100" y1="112" x2="100" y2="32"/>
+    <circle cx="100" cy="100" r="4.2" fill="var(--ink)"/>
+    <circle cx="100" cy="100" r="1.6" fill="var(--paper)"/>
+  </svg>
+</div>
+
+<p id="headline"></p>
+<p id="subline"></p>
+
+<div id="panel">
+  <div class="row" id="presets"></div>
+  <div class="row hidden" id="actions">
+    <button id="snooze"></button>
+    <button id="stop"></button>
+  </div>
+</div>
+
+<div id="sheet">
+  <h2 id="h-lang">Language</h2>
+  <div id="langs"></div>
+  <h2 id="h-mode"></h2>
+  <div id="modes"></div>
+  <h2 id="h-color"></h2>
+  <div id="swatches"></div>
+  <button id="closeSheet"></button>
+</div>
+
+<div id="adSlot">広告バナー（AdMob 320×50）</div>
+
+<script>
+(() => {
+  "use strict";
+  const $ = s => document.querySelector(s);
+  const CX = 100, CY = 100, R_RING = 92, MAX_MIN = 60;
+
+  /* ===== チャイム音源：ここを差し替える ===== */
+  const CHIME_SRC = "chime.mp3";
+  /* ======================================== */
+
+  /* ---------- 言語リソース ----------
+     追加するときは STR に 1 ブロック足すだけ。
+     kid = やさしい言い回し / adult = 標準表記                       */
+  const STR = {
+    ja: {
+      name:"日本語", tag:"ja", modeKid:"こども", modeAdult:"大人",
+      hLang:"ことば / Language", hMode:"モード", hColor:"わくの いろ", close:"とじる",
+      kid:{
+        presets:[5,10,15,20,30], unit:n=>[1,3,4,6,8,10].includes(n)?"ぷん":"ふん",
+        idle:"わくを なぞってね", drag:"はなすと スタート",
+        remain:n=>`あと <span class="big">${n}</span>${[1,3,4,6,8,10].includes(n)?"ぷん":"ふん"}`,
+        done:`<span class="big">じかん</span><br>だよ！`,
+        until:t=>`${t} まで`, stop:"とめる", snooze:"あと5ふん"
+      },
+      adult:{
+        presets:[5,10,15,25,45], unit:()=>"分",
+        idle:"文字盤をなぞって設定", drag:"離すと開始",
+        remain:n=>`残り <span class="big">${n}</span>分`,
+        done:`<span class="big">終了</span><br>時間です`,
+        until:t=>`${t} に終了`, stop:"停止", snooze:"+5分"
+      }
+    },
+    en: {
+      name:"English", tag:"en", modeKid:"Kids", modeAdult:"Adult",
+      hLang:"Language", hMode:"Mode", hColor:"Ring color", close:"Close",
+      kid:{
+        presets:[5,10,15,20,30], unit:()=>"min",
+        idle:"Trace the ring!", drag:"Let go to start",
+        remain:n=>`<span class="big">${n}</span> min left`,
+        done:`<span class="big">Time</span><br>is up!`,
+        until:t=>`until ${t}`, stop:"Stop", snooze:"+5 min"
+      },
+      adult:{
+        presets:[5,10,15,25,45], unit:()=>"min",
+        idle:"Drag the dial to set", drag:"Release to start",
+        remain:n=>`<span class="big">${n}</span> min left`,
+        done:`<span class="big">Time</span><br>is up`,
+        until:t=>`ends at ${t}`, stop:"Stop", snooze:"+5 min"
+      }
+    },
+    zhHans: {
+      name:"简体中文", tag:"zh-Hans", modeKid:"儿童", modeAdult:"成人",
+      hLang:"语言", hMode:"模式", hColor:"圆圈颜色", close:"关闭",
+      kid:{
+        presets:[5,10,15,20,30], unit:()=>"分",
+        idle:"沿着圆圈画一画", drag:"松手就开始",
+        remain:n=>`还有 <span class="big">${n}</span> 分`,
+        done:`<span class="big">时间</span><br>到啦！`,
+        until:t=>`到 ${t}`, stop:"停止", snooze:"再5分"
+      },
+      adult:{
+        presets:[5,10,15,25,45], unit:()=>"分",
+        idle:"拖动表盘设定时间", drag:"松开开始",
+        remain:n=>`剩余 <span class="big">${n}</span> 分`,
+        done:`<span class="big">时间</span><br>到`,
+        until:t=>`${t} 结束`, stop:"停止", snooze:"+5分"
+      }
+    },
+    zhHant: {
+      name:"繁體中文", tag:"zh-Hant", modeKid:"兒童", modeAdult:"成人",
+      hLang:"語言", hMode:"模式", hColor:"圓圈顏色", close:"關閉",
+      kid:{
+        presets:[5,10,15,20,30], unit:()=>"分",
+        idle:"沿著圓圈畫一畫", drag:"放開就開始",
+        remain:n=>`還有 <span class="big">${n}</span> 分`,
+        done:`<span class="big">時間</span><br>到了！`,
+        until:t=>`到 ${t}`, stop:"停止", snooze:"再5分"
+      },
+      adult:{
+        presets:[5,10,15,25,45], unit:()=>"分",
+        idle:"拖曳錶盤設定時間", drag:"放開開始",
+        remain:n=>`剩餘 <span class="big">${n}</span> 分`,
+        done:`<span class="big">時間</span><br>到`,
+        until:t=>`${t} 結束`, stop:"停止", snooze:"+5分"
+      }
+    },
+    ko: {
+      name:"한국어", tag:"ko", modeKid:"어린이", modeAdult:"어른",
+      hLang:"언어", hMode:"모드", hColor:"테두리 색", close:"닫기",
+      kid:{
+        presets:[5,10,15,20,30], unit:()=>"분",
+        idle:"동그라미를 따라 그려요", drag:"손을 떼면 시작",
+        remain:n=>`<span class="big">${n}</span>분 남았어요`,
+        done:`<span class="big">시간</span><br>됐어요!`,
+        until:t=>`${t}까지`, stop:"그만", snooze:"5분 더"
+      },
+      adult:{
+        presets:[5,10,15,25,45], unit:()=>"분",
+        idle:"다이얼을 드래그해 설정", drag:"놓으면 시작",
+        remain:n=>`<span class="big">${n}</span>분 남음`,
+        done:`<span class="big">시간</span><br>종료`,
+        until:t=>`${t} 종료`, stop:"정지", snooze:"+5분"
+      }
+    },
+    mn: {
+      name:"Монгол", tag:"mn-Cyrl", modeKid:"Хүүхэд", modeAdult:"Том хүн",
+      hLang:"Хэл", hMode:"Горим", hColor:"Тойргийн өнгө", close:"Хаах",
+      kid:{
+        presets:[5,10,15,20,30], unit:()=>"мин",
+        idle:"Тойргийг даган зур", drag:"Тавихад эхэлнэ",
+        remain:n=>`<span class="big">${n}</span> минут үлдлээ`,
+        done:`<span class="big">Цаг</span><br>боллоо!`,
+        until:t=>`${t} хүртэл`, stop:"Зогсоох", snooze:"+5 мин"
+      },
+      adult:{
+        presets:[5,10,15,25,45], unit:()=>"мин",
+        idle:"Циферблатыг чирж тохируулна", drag:"Тавихад эхэлнэ",
+        remain:n=>`<span class="big">${n}</span> минут үлдсэн`,
+        done:`<span class="big">Цаг</span><br>дууслаа`,
+        until:t=>`${t}-д дуусна`, stop:"Зогсоох", snooze:"+5 минут"
+      }
+    },
+    /* --- 伝統モンゴル文字（縦書き）。実験的：綴りはネイティブ校正が必要 --- */
+    mnMong: {
+      name:"ᠮᠣᠩᠭᠣᠯ", tag:"mn-Mong", vertical:true,
+      modeKid:"ᠬᠡᠦᠬᠡᠳ", modeAdult:"ᠲᠣᠮᠣ ᠬᠦᠮᠦᠨ",
+      hLang:"ᠬᠡᠯᠡ", hMode:"ᠬᠡᠯᠪᠡᠷᠢ", hColor:"ᠥᠩᠭᠡ", close:"ᠬᠠᠭᠠᠬᠤ",
+      kid:{
+        presets:[5,10,15,20,30], unit:()=>"ᠮᠢᠨᠦ᠋ᠲ",
+        idle:"ᠲᠣᠭᠣᠷᠢᠭ ᠢ ᠳᠠᠭᠠᠨ ᠵᠢᠷᠤ", drag:"ᠲᠠᠯᠪᠢᠪᠠᠯ ᠡᠬᠢᠯᠡᠨ᠎ᠡ",
+        remain:n=>`<span class="big">${n}</span> ᠮᠢᠨᠦ᠋ᠲ ᠦᠯᠡᠳᠡᠪᠡ`,
+        done:`<span class="big">ᠴᠠᠭ</span> ᠪᠣᠯᠪᠠ᠃`,
+        until:t=>`${t} ᠬᠦᠷᠲᠡᠯ᠎ᠡ`, stop:"ᠵᠣᠭᠰᠣᠭᠠᠬᠤ", snooze:"+5 ᠮᠢᠨᠦ᠋ᠲ"
+      },
+      adult:{
+        presets:[5,10,15,25,45], unit:()=>"ᠮᠢᠨᠦ᠋ᠲ",
+        idle:"ᠴᠠᠭ ᠢ ᠴᠢᠷᠴᠦ ᠲᠣᠬᠢᠷᠠᠭᠤᠯᠤᠨ᠎ᠠ", drag:"ᠲᠠᠯᠪᠢᠪᠠᠯ ᠡᠬᠢᠯᠡᠨ᠎ᠡ",
+        remain:n=>`<span class="big">${n}</span> ᠮᠢᠨᠦ᠋ᠲ ᠦᠯᠡᠳᠡᠪᠡ`,
+        done:`<span class="big">ᠴᠠᠭ</span> ᠳᠠᠭᠤᠰᠪᠠ᠃`,
+        until:t=>`${t} ᠳᠤ ᠳᠠᠭᠤᠰᠤᠨ᠎ᠠ`, stop:"ᠵᠣᠭᠰᠣᠭᠠᠬᠤ", snooze:"+5 ᠮᠢᠨᠦ᠋ᠲ"
+      }
+    }
+  };
+
+  const COLORS = [
+    ["red","#E2402F"],["orange","#F08519"],["yellow","#EDB100"],
+    ["green","#3FA46A"],["blue","#2F7FE2"],["purple","#8A5FD6"],["pink","#E85C9A"]
+  ];
+  const store = {
+    get(k,d){ try{ return localStorage.getItem(k) ?? d; }catch(_){ return d; } },
+    set(k,v){ try{ localStorage.setItem(k,v); }catch(_){} }
+  };
+  const detectLang = () => {
+    const tag = (navigator.language || "ja").toLowerCase();
+    if (tag.startsWith("zh"))
+      return /hant|tw|hk|mo/.test(tag) ? "zhHant" : "zhHans";
+    if (tag.startsWith("mn"))
+      return tag.includes("mong") ? "mnMong" : "mn";
+    const hit = ["ko","en"].find(l => tag.startsWith(l));
+    return hit || "ja";                       // 未対応の言語は日本語
+  };
+
+  /* ---------- 文字盤 ---------- */
+  const NS="http://www.w3.org/2000/svg";
+  const pt=(deg,r)=>{ const a=(deg-90)*Math.PI/180; return [CX+r*Math.cos(a), CY+r*Math.sin(a)]; };
+  for (let i=0;i<60;i++){
+    const big=i%5===0;
+    const [x1,y1]=pt(i*6, big?76:79.5), [x2,y2]=pt(i*6,83);
+    const l=document.createElementNS(NS,"line");
+    l.setAttribute("x1",x1); l.setAttribute("y1",y1);
+    l.setAttribute("x2",x2); l.setAttribute("y2",y2);
+    l.setAttribute("stroke", big?"var(--ink)":"var(--sub)");
+    l.setAttribute("stroke-width", big?2:.8);
+    l.setAttribute("stroke-linecap","round");
+    $("#ticks").appendChild(l);
+  }
+  for (let n=1;n<=12;n++){
+    const [x,y]=pt(n*30,64);
+    const t=document.createElementNS(NS,"text");
+    t.setAttribute("x",x); t.setAttribute("y",y);
+    t.setAttribute("class","num"+(n%3===0?" cardinal":""));
+    t.textContent=n;
+    $("#numbers").appendChild(t);
+  }
+
+  /* ---------- 状態 ---------- */
+  let targetAt=null, ringing=false, dragMin=null;
+  let lang=store.get("atodokei.lang", detectLang());
+  let mode=store.get("atodokei.mode","kid");
+  const L=()=>STR[lang];
+  const t=()=>STR[lang][mode];
+  const arc=$("#arc"), goalMark=$("#goalMark"), headline=$("#headline"),
+        subline=$("#subline"), actions=$("#actions"), presets=$("#presets");
+
+  const arcPath=(from,sweep,r)=>{
+    sweep=Math.min(sweep,359.9);
+    const [x0,y0]=pt(from,r),[x1,y1]=pt(from+sweep,r);
+    return `M ${x0} ${y0} A ${r} ${r} 0 ${sweep>180?1:0} 1 ${x1} ${y1}`;
+  };
+  const drawArc=(from,mins)=>{
+    arc.setAttribute("d",arcPath(from,mins*6,R_RING));
+    const [gx,gy]=pt(from+Math.min(mins*6,359.9),R_RING);
+    goalMark.setAttribute("cx",gx); goalMark.setAttribute("cy",gy); goalMark.setAttribute("r",7);
+  };
+  const clearArc=()=>{ arc.setAttribute("d",""); goalMark.setAttribute("r",0); };
+  const hhmm=d=>`${d.getHours()%12||12}:${String(d.getMinutes()).padStart(2,"0")}`;
+  // 縦組みのときだけ、連続する数字を縦中横スパンで包む
+  const tcy=str=>L().vertical ? String(str).replace(/\d+/g,d=>`<span class="tcy">${d}</span>`) : str;
+
+  /* ---------- 毎フレーム ---------- */
+  function frame(){
+    const now=new Date();
+    const ms=now.getMilliseconds(), s=now.getSeconds(), m=now.getMinutes(), h=now.getHours()%12;
+    const nowAngle=(m+(s+ms/1000)/60)*6;
+    $("#hour").setAttribute("transform",`rotate(${(h+m/60)*30} ${CX} ${CY})`);
+    $("#min").setAttribute("transform",`rotate(${(m+s/60)*6} ${CX} ${CY})`);
+    $("#sec").setAttribute("transform",`rotate(${s*6} ${CX} ${CY})`);
+
+    if (dragMin!==null){
+      drawArc(nowAngle,dragMin);
+      headline.innerHTML=tcy(t().remain(dragMin));
+      subline.innerHTML=t().drag;
+    } else if (targetAt && !ringing){
+      const remain=(targetAt-now)/1000;
+      if (remain<=0) startRinging();
+      else{
+        drawArc(nowAngle, Math.min(remain, MAX_MIN*60)/60);
+        headline.innerHTML=tcy(t().remain(Math.ceil(remain/60)));
+        subline.innerHTML=tcy(t().until(hhmm(targetAt)));
+      }
+    }
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+
+  /* ---------- 音 ---------- */
+  let audioEl=null, ctx=null, loopId=null, stopAt=0;
+  const N={G5:784,A5:880,C6:1046.5,E6:1318.5,G6:1568,A6:1760};
+  const MELODY=[[N.G5,0],[N.C6,.2],[N.E6,.4],[N.G6,.6],[N.E6,.8],[N.C6,1],
+                [N.A5,1.3],[N.C6,1.5],[N.E6,1.7],[N.A6,1.9],[N.E6,2.1],[N.C6,2.4],[N.G6,2.4]];
+  function note(f,at){
+    [[1,.22],[2,.07],[3,.03]].forEach(([mul,g0])=>{
+      const o=ctx.createOscillator(), g=ctx.createGain();
+      o.type="sine"; o.frequency.value=f*mul;
+      g.gain.setValueAtTime(0,at);
+      g.gain.linearRampToValueAtTime(g0,at+.008);
+      g.gain.exponentialRampToValueAtTime(.0001,at+1.6);
+      o.connect(g).connect(ctx.destination);
+      o.start(at); o.stop(at+1.7);
+    });
+  }
+  function synthOnce(){
+    if (ctx.currentTime>stopAt) return stopSound();
+    const t0=ctx.currentTime+.05;
+    MELODY.forEach(([f,dt])=>note(f,t0+dt));
+  }
+  function startSound(){
+    if (audioEl){
+      audioEl.currentTime=0;
+      audioEl.play().then(()=>{ loopId=setTimeout(stopSound,120000); }).catch(fallback);
+    } else fallback();
+    function fallback(){
+      audioEl=null;
+      ctx=ctx||new (window.AudioContext||window.webkitAudioContext)();
+      ctx.resume();
+      stopAt=ctx.currentTime+120;
+      synthOnce();
+      loopId=setInterval(synthOnce,3200);
+    }
+  }
+  function stopSound(){
+    clearInterval(loopId); clearTimeout(loopId); loopId=null;
+    if (audioEl){ audioEl.pause(); audioEl.currentTime=0; }
+  }
+  function primeAudio(){
+    if (!ctx){ try{ ctx=new (window.AudioContext||window.webkitAudioContext)(); }catch(_){} }
+    if (ctx) ctx.resume();
+    if (audioEl) audioEl.load();
+  }
+  (()=>{ const a=new Audio(CHIME_SRC); a.loop=true; a.preload="auto";
+    a.addEventListener("canplaythrough",()=>{audioEl=a;},{once:true});
+    a.addEventListener("error",()=>{audioEl=null;},{once:true});
+  })();
+
+  /* ---------- 開始／終了 ---------- */
+  function setTarget(mins){
+    mins=Math.max(1,Math.min(MAX_MIN,mins));
+    targetAt=new Date(Date.now()+mins*60000);
+    ringing=false; document.body.id="";
+    stopSound(); primeAudio(); requestLock();
+    presets.classList.add("hidden"); actions.classList.remove("hidden");
+  }
+  function startRinging(){
+    ringing=true; document.body.id="ringing";
+    arc.setAttribute("d",arcPath(0,359.9,R_RING)); goalMark.setAttribute("r",0);
+    headline.innerHTML=tcy(t().done); subline.textContent="";
+    startSound();
+    if (navigator.vibrate) navigator.vibrate([120,80,120]);
+  }
+  function reset(){
+    ringing=false; targetAt=null; document.body.id="";
+    stopSound(); clearArc(); releaseLock();
+    headline.textContent=t().idle; subline.textContent="";
+    actions.classList.add("hidden"); presets.classList.remove("hidden");
+  }
+  $("#stop").addEventListener("click",reset);
+  $("#snooze").addEventListener("click",()=>setTarget(5));
+  presets.addEventListener("click",e=>{
+    const b=e.target.closest("button"); if(!b) return;
+    const base = targetAt && !ringing ? (targetAt-Date.now())/60000 : 0;
+    setTarget(Math.round(base)+(+b.dataset.min));
+  });
+
+  /* ---------- 文字盤ドラッグ ---------- */
+  const svg=$("#clock");
+  const angleAt=ev=>{
+    const r=svg.getBoundingClientRect();
+    const x=(ev.clientX-r.left)/r.width*200-CX, y=(ev.clientY-r.top)/r.height*200-CY;
+    return (Math.atan2(x,-y)*180/Math.PI+360)%360;
+  };
+  const minsFromPointer=ev=>{
+    const now=new Date();
+    const nowAngle=(now.getMinutes()+now.getSeconds()/60)*6;
+    return Math.max(1,Math.min(MAX_MIN,Math.round(((angleAt(ev)-nowAngle+360)%360)/6)));
+  };
+  svg.addEventListener("pointerdown",ev=>{
+    if (ringing) return;
+    svg.setPointerCapture(ev.pointerId);
+    dragMin=minsFromPointer(ev); primeAudio(); ev.preventDefault();
+  });
+  svg.addEventListener("pointermove",ev=>{ if(dragMin!==null) dragMin=minsFromPointer(ev); });
+  svg.addEventListener("pointerup",()=>{ if(dragMin===null) return; const m=dragMin; dragMin=null; setTarget(m); });
+  svg.addEventListener("pointercancel",()=>{ dragMin=null; });
+
+  /* ---------- 設定 ---------- */
+  const sheet=$("#sheet"), swatches=$("#swatches"), langs=$("#langs"), modes=$("#modes");
+  let picked=store.get("atodokei.color",COLORS[0][1]);
+  const applyColor=c=>{
+    picked=c;
+    document.documentElement.style.setProperty("--pick",c);
+    [...swatches.children].forEach(b=>b.setAttribute("aria-pressed", b.dataset.c===c));
+    store.set("atodokei.color",c);
+  };
+  COLORS.forEach(([name,c])=>{
+    const b=document.createElement("button");
+    b.className="sw"; b.dataset.c=c; b.style.background=c;
+    b.setAttribute("aria-label",name); b.setAttribute("aria-pressed","false");
+    b.addEventListener("click",()=>applyColor(c));
+    swatches.appendChild(b);
+  });
+
+  Object.keys(STR).forEach(code=>{
+    const b=document.createElement("button");
+    b.dataset.lang=code; b.textContent=STR[code].name;
+    b.addEventListener("click",()=>applyLang(code));
+    langs.appendChild(b);
+  });
+  ["kid","adult"].forEach(m=>{
+    const b=document.createElement("button");
+    b.dataset.mode=m;
+    b.addEventListener("click",()=>applyMode(m));
+    modes.appendChild(b);
+  });
+
+  function renderTexts(){
+    document.documentElement.lang = L().tag || lang;
+    document.body.classList.toggle("mong", !!L().vertical);
+    [...langs.children].forEach(b=>b.setAttribute("aria-pressed", b.dataset.lang===lang));
+    [...modes.children].forEach(b=>{
+      b.setAttribute("aria-pressed", b.dataset.mode===mode);
+      b.textContent = b.dataset.mode==="kid" ? L().modeKid : L().modeAdult;
+    });
+    presets.innerHTML="";
+    t().presets.forEach(v=>{
+      const b=document.createElement("button");
+      b.className="mins"; b.dataset.min=v;
+      b.innerHTML=`${tcy(v)}<small>${t().unit(v)}</small>`;
+      presets.appendChild(b);
+    });
+    $("#stop").innerHTML=tcy(t().stop);
+    $("#snooze").innerHTML=tcy(t().snooze);
+    $("#h-lang").textContent=L().hLang;
+    $("#h-mode").textContent=L().hMode;
+    $("#h-color").textContent=L().hColor;
+    $("#closeSheet").textContent=L().close;
+    if (ringing) headline.innerHTML=tcy(t().done);
+    else if (!targetAt) headline.textContent=t().idle;
+  }
+  function applyLang(code){ lang=code; store.set("atodokei.lang",code); renderTexts(); }
+  function applyMode(m){
+    mode=m; store.set("atodokei.mode",m);
+    document.body.classList.toggle("adult", m==="adult");
+    renderTexts();
+  }
+
+  applyColor(picked); applyMode(mode); applyLang(lang);
+  $("#gear").addEventListener("click",()=>sheet.classList.toggle("open"));
+  $("#closeSheet").addEventListener("click",()=>sheet.classList.remove("open"));
+
+  /* ---------- 画面点灯維持 ---------- */
+  let lock=null;
+  async function requestLock(){
+    try{ if("wakeLock" in navigator && !lock) lock=await navigator.wakeLock.request("screen"); }catch(_){}
+  }
+  function releaseLock(){ if(lock){ lock.release().catch(()=>{}); lock=null; } }
+  document.addEventListener("visibilitychange",()=>{
+    if (document.visibilityState==="visible" && targetAt && !ringing) requestLock();
+  });
+})();
+</script>
+</body>
+</html>
