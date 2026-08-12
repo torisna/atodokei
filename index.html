@@ -59,8 +59,18 @@
   body.mong #headline .big{font-size:1.7em}
   body.mong #modes button,body.mong #langs button,body.mong #closeSheet{font-weight:400}
 
-  #topbar{width:100%;max-width:460px;display:flex;justify-content:flex-end;height:36px;flex:0 0 auto}
-  #gear{width:36px;height:36px;border-radius:50%;font-size:17px;padding:0;line-height:36px}
+  #topbar{width:100%;max-width:460px;display:flex;justify-content:space-between;height:36px;flex:0 0 auto}
+  #gear,#lock{width:36px;height:36px;border-radius:50%;font-size:17px;padding:0;line-height:36px}
+  /* ロック中：色が変わり、長押しで解除。::after が 0.8 秒かけて塗りつぶされる */
+  #lock{position:relative;overflow:hidden;transition:background .18s,color .18s}
+  #lock[aria-pressed="true"]{background:var(--pick);color:#fff;box-shadow:0 3px 0 rgba(0,0,0,.25)}
+  #lock::after{
+    content:"";position:absolute;inset:0;border-radius:50%;
+    background:rgba(255,255,255,.55);transform:scale(0);transform-origin:center;
+  }
+  #lock.holding::after{transform:scale(1);transition:transform .8s linear}
+  body.locked .mins,body.locked #stop,body.locked #snooze,body.locked #gear{opacity:.4}
+  body.locked #clockWrap{filter:drop-shadow(0 8px 20px rgba(34,40,44,.13)) saturate(.9)}
 
   #clockWrap{
     width:min(92vw,52vh);aspect-ratio:1;flex:0 1 auto;touch-action:none;
@@ -127,7 +137,10 @@
 </head>
 <body>
 
-<div id="topbar"><button id="gear" aria-label="settings">⚙</button></div>
+<div id="topbar">
+  <button id="lock" aria-label="lock" aria-pressed="false">🔓</button>
+  <button id="gear" aria-label="settings">⚙</button>
+</div>
 
 <div id="clockWrap">
   <svg id="clock" viewBox="0 0 200 200" role="img" aria-label="clock">
@@ -183,7 +196,7 @@
      kid = やさしい言い回し / adult = 標準表記                       */
   const STR = {
     ja: {
-      name:"日本語", tag:"ja", modeKid:"こども", modeAdult:"大人",
+      name:"日本語", tag:"ja", hold:"ながおしで かいじょ", modeKid:"こども", modeAdult:"大人",
       hLang:"ことば / Language", hMode:"モード", hColor:"わくの いろ", close:"とじる",
       kid:{
         presets:[5,10,15,20,30], unit:n=>[1,3,4,6,8,10].includes(n)?"ぷん":"ふん",
@@ -201,7 +214,7 @@
       }
     },
     en: {
-      name:"English", tag:"en", modeKid:"Kids", modeAdult:"Adult",
+      name:"English", tag:"en", hold:"Hold to unlock", modeKid:"Kids", modeAdult:"Adult",
       hLang:"Language", hMode:"Mode", hColor:"Ring color", close:"Close",
       kid:{
         presets:[5,10,15,20,30], unit:()=>"min",
@@ -218,8 +231,26 @@
         until:t=>`ends at ${t}`, stop:"Stop", snooze:"+5 min"
       }
     },
+    es: {
+      name:"Español", tag:"es", hold:"Mantén pulsado para desbloquear", modeKid:"Niños", modeAdult:"Adulto",
+      hLang:"Idioma", hMode:"Modo", hColor:"Color del aro", close:"Cerrar",
+      kid:{
+        presets:[5,10,15,20,30], unit:()=>"min",
+        idle:"¡Dibuja el círculo!", drag:"Suelta para empezar",
+        remain:n=>`Faltan <span class="big">${n}</span> min`,
+        done:`<span class="big">¡Ya</span><br>es la hora!`,
+        until:t=>`hasta las ${t}`, stop:"Parar", snooze:"+5 min"
+      },
+      adult:{
+        presets:[5,10,15,25,45], unit:()=>"min",
+        idle:"Arrastra la esfera para ajustar", drag:"Suelta para iniciar",
+        remain:n=>`Quedan <span class="big">${n}</span> min`,
+        done:`<span class="big">Tiempo</span><br>terminado`,
+        until:t=>`termina a las ${t}`, stop:"Detener", snooze:"+5 min"
+      }
+    },
     zhHans: {
-      name:"简体中文", tag:"zh-Hans", modeKid:"儿童", modeAdult:"成人",
+      name:"简体中文", tag:"zh-Hans", hold:"长按解锁", modeKid:"儿童", modeAdult:"成人",
       hLang:"语言", hMode:"模式", hColor:"圆圈颜色", close:"关闭",
       kid:{
         presets:[5,10,15,20,30], unit:()=>"分",
@@ -237,7 +268,7 @@
       }
     },
     zhHant: {
-      name:"繁體中文", tag:"zh-Hant", modeKid:"兒童", modeAdult:"成人",
+      name:"繁體中文", tag:"zh-Hant", hold:"長按解鎖", modeKid:"兒童", modeAdult:"成人",
       hLang:"語言", hMode:"模式", hColor:"圓圈顏色", close:"關閉",
       kid:{
         presets:[5,10,15,20,30], unit:()=>"分",
@@ -255,7 +286,7 @@
       }
     },
     ko: {
-      name:"한국어", tag:"ko", modeKid:"어린이", modeAdult:"어른",
+      name:"한국어", tag:"ko", hold:"길게 눌러 해제", modeKid:"어린이", modeAdult:"어른",
       hLang:"언어", hMode:"모드", hColor:"테두리 색", close:"닫기",
       kid:{
         presets:[5,10,15,20,30], unit:()=>"분",
@@ -273,7 +304,7 @@
       }
     },
     mn: {
-      name:"Монгол", tag:"mn-Cyrl", modeKid:"Хүүхэд", modeAdult:"Том хүн",
+      name:"Монгол", tag:"mn-Cyrl", hold:"Удаан дарж тайлна", modeKid:"Хүүхэд", modeAdult:"Том хүн",
       hLang:"Хэл", hMode:"Горим", hColor:"Тойргийн өнгө", close:"Хаах",
       kid:{
         presets:[5,10,15,20,30], unit:()=>"мин",
@@ -292,7 +323,7 @@
     },
     /* --- 伝統モンゴル文字（縦書き）。実験的：綴りはネイティブ校正が必要 --- */
     mnMong: {
-      name:"ᠮᠣᠩᠭᠣᠯ", tag:"mn-Mong", vertical:true,
+      name:"ᠮᠣᠩᠭᠣᠯ", tag:"mn-Mong", hold:"ᠤᠳᠠᠭᠠᠨ ᠳᠠᠷᠤᠵᠤ ᠲᠠᠶᠢᠯᠤᠨ᠎ᠠ", vertical:true,
       modeKid:"ᠬᠡᠦᠬᠡᠳ", modeAdult:"ᠲᠣᠮᠣ ᠬᠦᠮᠦᠨ",
       hLang:"ᠬᠡᠯᠡ", hMode:"ᠬᠡᠯᠪᠡᠷᠢ", hColor:"ᠥᠩᠭᠡ", close:"ᠬᠠᠭᠠᠬᠤ",
       kid:{
@@ -326,7 +357,7 @@
       return /hant|tw|hk|mo/.test(tag) ? "zhHant" : "zhHans";
     if (tag.startsWith("mn"))
       return tag.includes("mong") ? "mnMong" : "mn";
-    const hit = ["ko","en"].find(l => tag.startsWith(l));
+    const hit = ["ko","en","es"].find(l => tag.startsWith(l));
     return hit || "ja";                       // 未対応の言語は日本語
   };
 
@@ -354,7 +385,7 @@
   }
 
   /* ---------- 状態 ---------- */
-  let targetAt=null, ringing=false, dragMin=null;
+  let targetAt=null, ringing=false, dragMin=null, locked=false;
   let lang=store.get("atodokei.lang", detectLang());
   let mode=store.get("atodokei.mode","kid");
   const L=()=>STR[lang];
@@ -473,10 +504,10 @@
     headline.textContent=t().idle; subline.textContent="";
     actions.classList.add("hidden"); presets.classList.remove("hidden");
   }
-  $("#stop").addEventListener("click",reset);
-  $("#snooze").addEventListener("click",()=>setTarget(5));
+  $("#stop").addEventListener("click",()=>{ if(!locked) reset(); });
+  $("#snooze").addEventListener("click",()=>{ if(!locked) setTarget(5); });
   presets.addEventListener("click",e=>{
-    const b=e.target.closest("button"); if(!b) return;
+    const b=e.target.closest("button"); if(!b||locked) return;
     const base = targetAt && !ringing ? (targetAt-Date.now())/60000 : 0;
     setTarget(Math.round(base)+(+b.dataset.min));
   });
@@ -494,7 +525,7 @@
     return Math.max(1,Math.min(MAX_MIN,Math.round(((angleAt(ev)-nowAngle+360)%360)/6)));
   };
   svg.addEventListener("pointerdown",ev=>{
-    if (ringing) return;
+    if (ringing || locked) return;
     svg.setPointerCapture(ev.pointerId);
     dragMin=minsFromPointer(ev); primeAudio(); ev.preventDefault();
   });
@@ -564,8 +595,39 @@
   }
 
   applyColor(picked); applyMode(mode); applyLang(lang);
-  $("#gear").addEventListener("click",()=>sheet.classList.toggle("open"));
+  $("#gear").addEventListener("click",()=>{ if(!locked) sheet.classList.toggle("open"); });
   $("#closeSheet").addEventListener("click",()=>sheet.classList.remove("open"));
+
+  /* ---------- チャイルドロック ----------
+     かける：1タップ / はずす：0.8秒 長押し（子どもが偶然はずせないように）   */
+  const lockBtn=$("#lock");
+  let holdTimer=null;
+  function setLocked(v){
+    locked=v;
+    lockBtn.textContent = v ? "🔒" : "🔓";
+    lockBtn.setAttribute("aria-pressed", String(v));
+    document.body.classList.toggle("locked", v);
+    if (v) sheet.classList.remove("open");
+    subline.textContent="";
+  }
+  lockBtn.addEventListener("click",()=>{ if(!locked) setLocked(true); });
+  lockBtn.addEventListener("pointerdown",ev=>{
+    if (!locked) return;
+    ev.preventDefault();
+    lockBtn.classList.add("holding");
+    subline.textContent=L().hold;
+    holdTimer=setTimeout(()=>{
+      setLocked(false);
+      lockBtn.classList.remove("holding");
+      if (navigator.vibrate) navigator.vibrate(30);
+    },800);
+  });
+  ["pointerup","pointerleave","pointercancel"].forEach(t=>
+    lockBtn.addEventListener(t,()=>{
+      clearTimeout(holdTimer);
+      lockBtn.classList.remove("holding");
+      if (locked) subline.textContent="";
+    }));
 
   /* ---------- 画面点灯維持 ---------- */
   let lock=null;
