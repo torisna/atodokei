@@ -1,6 +1,6 @@
 /* あとどけい Service Worker
    デプロイのたびに VERSION を上げること（上げないと古い画面が残る） */
-const VERSION = "atodokei-v1";
+const VERSION = "atodokei-v3";
 const SHELL = [
   "./", "./index.html", "./manifest.json",
   "./icon-192.png", "./icon-512.png", "./icon-maskable-512.png"
